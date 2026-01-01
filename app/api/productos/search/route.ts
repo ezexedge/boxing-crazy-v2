@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         ],
       },
       include: {
-        variantes: true,
+        Variante: true,
       },
       take: 10,
       orderBy: { createdAt: "desc" },

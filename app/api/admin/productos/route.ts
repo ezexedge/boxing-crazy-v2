@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getTokenFromRequest, verifyToken } from "@/lib/auth"
+import { randomUUID } from "crypto"
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
 
     const productos = await prisma.producto.findMany({
       include: {
-        variantes: true, // 👈 Trae TODAS las variantes
+        Variante: true, // 👈 Trae TODAS las variantes
       },
       orderBy: { createdAt: "desc" },
     })
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     // ✅ Creación
     const producto = await prisma.producto.create({
       data: {
+        id: randomUUID(),
         nombre: data.nombre,
         descripcion: data.descripcion,
         precio: Number(data.precio),
@@ -55,16 +57,19 @@ export async function POST(request: Request) {
         genero: data.genero,
         imagenes: data.imagenes || [],
         imagenPortada: data.imagenPortada || data.imagenes?.[0] || null,
-        variantes: {
+        updatedAt: new Date(),
+        Variante: {
           create: data.variantes.map((v: any) => ({
+            id: randomUUID(),
             color: v.color,
             talle: v.talle,
             stock: Number(v.stock),
+            updatedAt: new Date(),
           })),
         },
       },
       include: {
-        variantes: true,
+        Variante: true,
       },
     })
 

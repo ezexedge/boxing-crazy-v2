@@ -1,7 +1,3 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
 import type { Producto } from "@/lib/types"
 import { Header } from "@/components/header"
 import { ProductCarousel } from "@/components/product-carousel"
@@ -10,69 +6,48 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
+import { getProductos } from "@/app/actions/productos"
 
-export default function HomePage() {
-  const searchParams = useSearchParams()
-  const genero = searchParams.get("genero")
-  const categoria = searchParams.get("categoria")
-
-  const [latestProducts, setLatestProducts] = useState<Producto[]>([])
-  const [menProducts, setMenProducts] = useState<Producto[]>([])
-  const [womenProducts, setWomenProducts] = useState<Producto[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<Producto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    fetchHomeProducts()
-  }, [genero, categoria])
-
-  const fetchHomeProducts = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch("/api/productos")
-      const data = await response.json()
-
-      if (!data.productos || !Array.isArray(data.productos)) {
-        console.error("[v0] Invalid API response:", data)
-        return
-      }
-
-      if (genero || categoria) {
-        let filtered = data.productos
-        if (genero) {
-          filtered = filtered.filter((p: Producto) => p.genero === genero)
-        }
-        if (categoria) {
-          filtered = filtered.filter((p: Producto) => p.categoria === categoria)
-        }
-        setFilteredProducts(filtered)
-      } else {
-        // Default homepage view
-        const sorted = [...data.productos].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )
-        setLatestProducts(sorted.slice(0, 8))
-
-        const menProds = data.productos.filter((p: Producto) => p.genero === "hombre")
-        const womenProds = data.productos.filter((p: Producto) => p.genero === "mujer")
-
-        setMenProducts(shuffleArray(menProds).slice(0, 8))
-        setWomenProducts(shuffleArray(womenProds).slice(0, 8))
-      }
-    } catch (error) {
-      console.error("[v0] Fetch productos error:", error)
-    } finally {
-      setIsLoading(false)
-    }
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
+  return shuffled
+}
 
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    const shuffled = [...array]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ genero?: string; categoria?: string }>
+}) {
+  const { genero, categoria } = await searchParams
+
+  // Fetch productos usando server action
+  const result = await getProductos({
+    genero: genero || undefined,
+    categoria: categoria || undefined,
+  })
+
+  const productos = result.success ? result.productos : []
+
+  let latestProducts: Producto[] = []
+  let menProducts: Producto[] = []
+  let womenProducts: Producto[] = []
+  let filteredProducts: Producto[] = []
+
+  if (genero || categoria) {
+    filteredProducts = productos
+  } else {
+    // Default homepage view
+    latestProducts = productos.slice(0, 8)
+
+    const menProds = productos.filter((p: Producto) => p.genero === "hombre")
+    const womenProds = productos.filter((p: Producto) => p.genero === "mujer")
+
+    menProducts = shuffleArray(menProds).slice(0, 8)
+    womenProducts = shuffleArray(womenProds).slice(0, 8)
   }
 
   const ProductSection = ({
@@ -128,13 +103,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-96 bg-neutral-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : filteredProducts.length > 0 ? (
+          {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredProducts.map((producto) => (
                 <ProductCard key={producto.id} producto={producto} />
@@ -161,31 +130,14 @@ export default function HomePage() {
       <HeroBanner />
 
       <main className="container mx-auto px-4 py-12">
-        {isLoading ? (
-          <div className="space-y-16">
-            {[...Array(3)].map((_, sectionIdx) => (
-              <div key={sectionIdx}>
-                <div className="h-8 w-48 bg-neutral-200 rounded mb-6 animate-pulse" />
-                <div className="flex gap-6 overflow-hidden">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex-none w-[280px] h-96 bg-neutral-100 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            <ProductSection title="Últimos Ingresos" products={latestProducts} />
+        <ProductSection title="Últimos Ingresos" products={latestProducts} />
 
-            {menProducts.length > 0 && (
-              <ProductSection title="Productos para Hombre" products={menProducts} viewAllLink="/?genero=hombre" />
-            )}
+        {menProducts.length > 0 && (
+          <ProductSection title="Productos para Hombre" products={menProducts} viewAllLink="/?genero=hombre" />
+        )}
 
-            {womenProducts.length > 0 && (
-              <ProductSection title="Productos para Mujer" products={womenProducts} viewAllLink="/?genero=mujer" />
-            )}
-          </>
+        {womenProducts.length > 0 && (
+          <ProductSection title="Productos para Mujer" products={womenProducts} viewAllLink="/?genero=mujer" />
         )}
       </main>
     </div>

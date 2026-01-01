@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
 import { getTokenFromRequest, verifyToken } from "@/lib/auth"
-import { mercadopago } from "@/lib/mercadopago"
+import { Preference } from "mercadopago"
+import { MercadoPagoConfig } from "mercadopago"
+import { billingAddressSchema } from "@/lib/validations/billing"
+
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || "",
+})
 
 export async function POST(request: Request) {
   try {
@@ -16,67 +21,87 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 })
     }
 
-    const { items } = await request.json()
+    const { items, billingAddress } = await request.json()
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 })
     }
 
-    // Calculate total and create order
-    const total = items.reduce((sum: number, item: any) => sum + item.precio * item.cantidad, 0)
+    // Validate billing address
+    if (!billingAddress) {
+      return NextResponse.json({ error: "La dirección de facturación es requerida" }, { status: 400 })
+    }
 
-    // Create order in database
-    const pedido = await prisma.pedido.create({
-      data: {
+    // Validate billing address with Zod
+    const validationResult = billingAddressSchema.safeParse(billingAddress)
+
+    if (!validationResult.success) {
+      console.error("[Checkout] Validation errors:", validationResult.error.errors)
+      return NextResponse.json(
+        {
+          error: "Datos de dirección inválidos",
+          details: validationResult.error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
+    const validatedAddress = validationResult.data
+
+    // Create MercadoPago preference (no creamos el pedido todavía)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    if (!baseUrl) {
+      return NextResponse.json({ error: "NEXT_PUBLIC_BASE_URL no configurada" }, { status: 500 })
+    }
+    const isProduction = baseUrl.startsWith("https://")
+
+    const preferenceData: any = {
+      items: items.map((item: any) => ({
+        id: String(item.productoId),
+        title: item.nombre,
+        quantity: Number(item.cantidad),
+        unit_price: Number(item.precio),
+        currency_id: "ARS",
+      })),
+      payer: {
+        name: validatedAddress.firstName,
+        surname: validatedAddress.lastName,
+        email: validatedAddress.email,
+      },
+      back_urls: {
+        success: `${baseUrl}/checkout/success`,
+        failure: `${baseUrl}/checkout/failure`,
+        pending: `${baseUrl}/checkout/pending`,
+      },
+      // Guardamos toda la info en metadata para crear el pedido en el webhook
+      metadata: {
         userId: payload.userId,
-        total,
-        estado: "pendiente",
-        items: {
-          create: items.map((item: any) => ({
-            productoId: item.productoId,
-            cantidad: item.cantidad,
-            precio: item.precio,
-            color: item.color,
-            talle: item.talle,
-          })),
-        },
+        items: JSON.stringify(items),
+        billingAddress: JSON.stringify(validatedAddress),
       },
-    })
+    }
 
-    // Create MercadoPago preference
-    const preference = await mercadopago.preference.create({
-      body: {
-        items: items.map((item: any) => ({
-          id: item.productoId,
-          title: item.nombre,
-          quantity: item.cantidad,
-          unit_price: item.precio,
-          currency_id: "ARS",
-        })),
-        back_urls: {
-          success: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/checkout/success?pedidoId=${pedido.id}`,
-          failure: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/checkout/failure`,
-          pending: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/checkout/pending`,
-        },
-        auto_return: "approved",
-        external_reference: pedido.id,
-        notification_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/webhooks/mercadopago`,
-      },
-    })
+    // Solo agregar notification_url en producción (URLs públicas)
+    if (isProduction) {
+      preferenceData.notification_url = `${baseUrl}/api/webhooks/mercadopago`
+    }
 
-    // Update order with MercadoPago ID
-    await prisma.pedido.update({
-      where: { id: pedido.id },
-      data: { mercadopagoId: preference.id },
+    console.log("[Checkout] Creating preference with data:", JSON.stringify(preferenceData, null, 2))
+
+    // Crear la preferencia usando el patrón recomendado
+    const preference = await new Preference(client).create({ body: preferenceData })
+
+    console.log("[Checkout] Preference created successfully:", {
+      id: preference.id,
+      init_point: preference.init_point,
     })
 
     return NextResponse.json({
       preferenceId: preference.id,
       initPoint: preference.init_point,
-      pedidoId: pedido.id,
     })
   } catch (error) {
-    console.error("[v0] Create checkout error:", error)
+    console.error("Create checkout error:", error)
     return NextResponse.json({ error: "Error al crear el checkout" }, { status: 500 })
   }
 }

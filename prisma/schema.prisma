@@ -7,67 +7,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  nombre    String
-  apellido  String
-  role      String   @default("user") // "user" or "admin"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  pedidos   Pedido[]
-}
-
-model Producto {
-  id             String        @id @default(cuid())
-  nombre         String
-  descripcion    String
-  precio         Float
-  categoria      String // "remeras", "shorts", "buzos", "tops"
-  genero         String // "hombre", "mujer"
-  imagenes       String[] // Array of image URLs
-  imagenPortada  String? // Added cover image field
-  variantes      Variante[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  pedidoItems    PedidoItem[]
-}
-
 model Pedido {
-  id              String       @id @default(cuid())
-  userId          String
-  user            User         @relation(fields: [userId], references: [id])
-  total           Float
-  estado          String       @default("pendiente") // "pendiente", "pagado", "enviado", "entregado"
-  mercadopagoId   String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  items           PedidoItem[]
+  id            String       @id
+  userId        String?
+  total         Float
+  estado        String       @default("pendiente")
+  mercadopagoId String?
+
+  // Dirección de envío/facturación
+  email         String
+  country       String
+  firstName     String
+  lastName      String
+  company       String?
+  addressLine1  String
+  addressLine2  String?
+  postalCode    String
+  city          String
+  province      String
+  phone         String?
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  User          User?        @relation(fields: [userId], references: [id])
+  PedidoItem    PedidoItem[]
 }
 
 model PedidoItem {
-  id         String   @id @default(cuid())
+  id         String   @id
   pedidoId   String
-  pedido     Pedido   @relation(fields: [pedidoId], references: [id])
   productoId String
-  producto   Producto @relation(fields: [productoId], references: [id])
   cantidad   Int
   precio     Float
   color      String?
   talle      String?
   createdAt  DateTime @default(now())
+  Pedido     Pedido   @relation(fields: [pedidoId], references: [id])
+  Producto   Producto @relation(fields: [productoId], references: [id])
+}
+
+model Producto {
+  id            String       @id
+  nombre        String
+  descripcion   String
+  precio        Float
+  categoria     String
+  genero        String
+  imagenes      String[]
+  imagenPortada String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  PedidoItem    PedidoItem[]
+  Variante      Variante[]
+}
+
+model User {
+  id        String   @id
+  email     String   @unique
+  password  String
+  nombre    String
+  apellido  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Pedido    Pedido[]
 }
 
 model Variante {
-  id         String   @id @default(cuid())
+  id         String   @id
   productoId String
-  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
   color      String
   talle      String
   stock      Int
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime
+  Producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@unique([productoId, color, talle])
 }

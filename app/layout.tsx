@@ -5,6 +5,7 @@ import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
 import { CartProvider } from "@/lib/cart-context"
 import { WhatsAppButton } from "@/components/whatsapp-button"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({
           <CartProvider>
             {children}
             <WhatsAppButton />
+            <Toaster />
           </CartProvider>
         </AuthProvider>
       </body>

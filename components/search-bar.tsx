@@ -71,7 +71,7 @@ export function SearchBar() {
   }
 
   const getTotalStock = (producto: Producto) => {
-    return producto.variantes.reduce((sum, v) => sum + v.stock, 0)
+    return producto.Variante.reduce((sum, v) => sum + v.stock, 0)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -106,7 +106,7 @@ export function SearchBar() {
       </div>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+        <div className="absolute top-full mt-2 w-full bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto z-[60]">
           {isLoading ? (
             <div className="p-4 text-center text-neutral-500">Buscando...</div>
           ) : results.length > 0 ? (

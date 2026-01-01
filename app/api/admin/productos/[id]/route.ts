@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getTokenFromRequest, verifyToken } from "@/lib/auth"
+import { randomUUID } from "crypto"
 
 // ✅ Obtener producto por ID (opcional)
 export async function GET(
@@ -18,7 +19,7 @@ export async function GET(
 
     const producto = await prisma.producto.findUnique({
       where: { id },
-      include: { variantes: true },
+      include: { Variante: true },
     })
 
     if (!producto)
@@ -63,15 +64,18 @@ export async function PUT(
           genero: data.genero,
           imagenes: data.imagenes || [],
           imagenPortada: data.imagenPortada || data.imagenes?.[0] || null,
-          variantes: {
+          updatedAt: new Date(),
+          Variante: {
             create: (data.variantes || []).map((v: any) => ({
+              id: randomUUID(),
               color: v.color,
               talle: v.talle,
               stock: Number(v.stock),
+              updatedAt: new Date(),
             })),
           },
         },
-        include: { variantes: true },
+        include: { Variante: true },
       }),
     ])
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { hashPassword, generateToken } from "@/lib/auth"
+import { randomUUID } from "crypto"
 
 export async function POST(request: Request) {
   try {
@@ -24,11 +25,13 @@ export async function POST(request: Request) {
     const hashedPassword = await hashPassword(password)
     const user = await prisma.user.create({
       data: {
+        id: randomUUID(),
         email,
         password: hashedPassword,
         nombre,
         apellido,
         role: "user",
+        updatedAt: new Date(),
       },
     })
 

@@ -42,15 +42,15 @@ export default function AdminProductosPage() {
   }, [])
 
   const fetchProductos = async () => {
+    if (!token) return
+
     try {
-      const response = await fetch("/api/admin/productos", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const data = await response.json()
-      console.log("xxx",data)
-      setProductos(data.productos)
+      const { adminGetProductos } = await import("@/app/actions/admin")
+      const result = await adminGetProductos(token)
+
+      if (result.success && result.productos) {
+        setProductos(result.productos)
+      }
     } catch (error) {
       console.error("[v0] Fetch productos error:", error)
     }
@@ -181,7 +181,7 @@ export default function AdminProductosPage() {
       genero: producto.genero,
     })
     setVariantes(
-      producto.variantes?.map((v) => ({
+      producto.Variante?.map((v) => ({
         color: v.color,
         talle: v.talle,
         stock: v.stock,
@@ -208,7 +208,7 @@ export default function AdminProductosPage() {
   }
 
   const getTotalStock = (producto: Producto) => {
-    return producto.variantes?.reduce((sum, v) => sum + v.stock, 0) || 0
+    return producto.Variante?.reduce((sum, v) => sum + v.stock, 0) || 0
   }
 
   return (
@@ -466,7 +466,7 @@ export default function AdminProductosPage() {
                 <td className="p-4">{producto.genero}</td>
                 <td className="p-4">${producto.precio.toLocaleString()}</td>
                 <td className="p-4">{getTotalStock(producto)}</td>
-                <td className="p-4">{producto.variantes?.length || 0}</td>
+                <td className="p-4">{producto.Variante?.length || 0}</td>
                 <td className="p-4 text-right">
                   <Button variant="ghost" size="icon" onClick={() => handleEdit(producto)}>
                     <Pencil className="h-4 w-4" />

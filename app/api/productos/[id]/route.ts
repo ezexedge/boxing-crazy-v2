@@ -7,7 +7,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const producto = await prisma.producto.findUnique({
       where: { id },
       include: {
-        variantes: true,
+        Variante: true,
       },
     })
 

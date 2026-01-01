@@ -24,7 +24,8 @@ export interface Producto {
   categoria: "remeras" | "shorts" | "buzos" | "tops"
   genero: "hombre" | "mujer"
   imagenes: string[]
-  variantes: Variante[]
+  imagenPortada?: string
+  Variante: Variante[]
   createdAt: Date
   updatedAt: Date
 }
@@ -47,7 +48,12 @@ export interface Pedido {
   mercadopagoId?: string
   createdAt: Date
   updatedAt: Date
-  items: PedidoItem[]
+  PedidoItem: PedidoItem[]
+  User?: {
+    nombre: string
+    apellido: string
+    email: string
+  }
 }
 
 export interface PedidoItem {
@@ -57,5 +63,5 @@ export interface PedidoItem {
   precio: number
   color?: string
   talle?: string
-  producto: Producto
+  Producto: Producto
 }

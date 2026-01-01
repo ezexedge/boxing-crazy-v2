@@ -20,14 +20,15 @@ export default function AdminDashboard() {
   }, [])
 
   const fetchStats = async () => {
+    if (!token) return
+
     try {
-      const response = await fetch("/api/admin/stats", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const data = await response.json()
-      setStats(data)
+      const { adminGetStats } = await import("@/app/actions/admin")
+      const result = await adminGetStats(token)
+
+      if (result.success && result.stats) {
+        setStats(result.stats)
+      }
     } catch (error) {
       console.error("[v0] Fetch stats error:", error)
     }

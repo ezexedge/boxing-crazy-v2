@@ -10,17 +10,17 @@ interface PedidoWithDetails {
   total: number
   estado: string
   createdAt: string
-  user: {
+  User: {
     nombre: string
     apellido: string
     email: string
   }
-  items: Array<{
+  PedidoItem: Array<{
     cantidad: number
     precio: number
     color?: string
     talle?: string
-    producto: {
+    Producto: {
       nombre: string
     }
   }>
@@ -35,31 +35,32 @@ export default function AdminPedidosPage() {
   }, [])
 
   const fetchPedidos = async () => {
+    if (!token) return
+
     try {
-      const response = await fetch("/api/admin/pedidos", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const data = await response.json()
-      setPedidos(data.pedidos)
+      const { adminGetPedidos } = await import("@/app/actions/admin")
+      const result = await adminGetPedidos(token)
+
+      if (result.success && result.pedidos) {
+        setPedidos(result.pedidos)
+      }
     } catch (error) {
       console.error("[v0] Fetch pedidos error:", error)
     }
   }
 
   const handleStatusChange = async (pedidoId: string, newEstado: string) => {
-    try {
-      const response = await fetch(`/api/admin/pedidos/${pedidoId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ estado: newEstado }),
-      })
+    if (!token) return
 
-      if (response.ok) {
+    try {
+      const { adminUpdatePedidoEstado } = await import("@/app/actions/admin")
+      const result = await adminUpdatePedidoEstado(
+        token,
+        pedidoId,
+        newEstado as "pendiente" | "pagado" | "enviado" | "entregado"
+      )
+
+      if (result.success) {
         fetchPedidos()
       }
     } catch (error) {
@@ -78,7 +79,7 @@ export default function AdminPedidosPage() {
               <div>
                 <h3 className="font-semibold text-lg">Pedido #{pedido.id.slice(0, 8)}</h3>
                 <p className="text-sm text-neutral-600">
-                  {pedido.user.nombre} {pedido.user.apellido} - {pedido.user.email}
+                  {pedido.User.nombre} {pedido.User.apellido} - {pedido.User.email}
                 </p>
                 <p className="text-sm text-neutral-600">{new Date(pedido.createdAt).toLocaleDateString()}</p>
               </div>
@@ -101,10 +102,10 @@ export default function AdminPedidosPage() {
             <div className="border-t pt-4">
               <h4 className="font-semibold mb-2">Items:</h4>
               <div className="space-y-2">
-                {pedido.items.map((item, index) => (
+                {pedido.PedidoItem.map((item, index) => (
                   <div key={index} className="flex justify-between text-sm">
                     <span>
-                      {item.producto.nombre} x {item.cantidad}
+                      {item.Producto.nombre} x {item.cantidad}
                       {item.color && ` - ${item.color}`}
                       {item.talle && ` - ${item.talle}`}
                     </span>

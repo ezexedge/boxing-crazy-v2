@@ -9,13 +9,15 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ producto }: ProductCardProps) {
-  const totalStock = producto.variantes?.reduce((sum, variante) => sum + variante.stock, 0) || 0
-  const availableColors = [...new Set(producto.variantes?.map((v) => v.color) || [])]
+
+  console.log("producto",producto)
+  const totalStock = producto.Variante?.reduce((sum, variante) => sum + variante.stock, 0) || 0
+  const availableColors = [...new Set(producto.Variante?.map((v) => v.color) || [])]
 
   return (
-    <Link href={`/producto/${producto.id}`}>
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-        <div className="aspect-square relative bg-neutral-100">
+    <Link href={`/producto/${producto.id}`} className="h-full">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+        <div className="aspect-square relative bg-neutral-100 flex-shrink-0">
           <Image
             src={producto.imagenes[0] || "/placeholder.svg?height=400&width=400"}
             alt={producto.nombre}
@@ -23,9 +25,9 @@ export function ProductCard({ producto }: ProductCardProps) {
             className="object-cover"
           />
         </div>
-        <CardContent className="p-4">
-          <h3 className="font-semibold text-lg mb-1">{producto.nombre}</h3>
-          <p className="text-sm text-neutral-600 mb-2 line-clamp-2">{producto.descripcion}</p>
+        <CardContent className="p-4 flex-grow flex flex-col">
+          <h3 className="font-semibold text-lg mb-1 line-clamp-1">{producto.nombre}</h3>
+          <p className="text-sm text-neutral-600 mb-2 line-clamp-2 flex-grow">{producto.descripcion}</p>
           <p className="text-xl font-bold">${producto.precio.toLocaleString()}</p>
           {availableColors.length > 0 && (
             <div className="mt-2">
@@ -33,7 +35,7 @@ export function ProductCard({ producto }: ProductCardProps) {
             </div>
           )}
         </CardContent>
-        <CardFooter className="p-4 pt-0">
+        <CardFooter className="p-4 pt-0 flex-shrink-0">
           <p className="text-sm text-neutral-600">
             {totalStock > 0 ? `Stock disponible: ${totalStock} unidades` : "Sin stock"}
           </p>
