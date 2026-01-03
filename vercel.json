@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/api/mercadopago/pagos",
+      "headers": [
+        {
+          "key": "x-vercel-protection-bypass",
+          "value": "public"
+        }
+      ]
+    }
+  ]
+}
