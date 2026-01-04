@@ -381,11 +381,31 @@ export default function AdminProductosPage() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      placeholder="Talle (ej: S, M, L)"
+                    <Select
                       value={newVariante.talle}
-                      onChange={(e) => setNewVariante({ ...newVariante, talle: e.target.value })}
-                    />
+                      onValueChange={(value) => setNewVariante({ ...newVariante, talle: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar talle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="XS">XS</SelectItem>
+                        <SelectItem value="S">S</SelectItem>
+                        <SelectItem value="M">M</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="XL">XL</SelectItem>
+                        <SelectItem value="XXL">XXL</SelectItem>
+                        <SelectItem value="XXXL">XXXL</SelectItem>
+                        <SelectItem value="2">2 años</SelectItem>
+                        <SelectItem value="4">4 años</SelectItem>
+                        <SelectItem value="6">6 años</SelectItem>
+                        <SelectItem value="8">8 años</SelectItem>
+                        <SelectItem value="10">10 años</SelectItem>
+                        <SelectItem value="12">12 años</SelectItem>
+                        <SelectItem value="14">14 años</SelectItem>
+                        <SelectItem value="16">16 años</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Input
                       placeholder="Stock"
                       type="number"
