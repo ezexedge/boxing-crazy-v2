@@ -37,7 +37,11 @@ export function ProductCard({ producto }: ProductCardProps) {
         </CardContent>
         <CardFooter className="p-4 pt-0 flex-shrink-0">
           <p className="text-sm text-neutral-600">
-            {totalStock > 0 ? `Stock disponible: ${totalStock} unidades` : "Sin stock"}
+            {totalStock > 0 ? (
+              availableColors.length > 1 ?
+                `Stock total: ${totalStock} unidades (todos los colores)` :
+                `Stock disponible: ${totalStock} unidades`
+            ) : "Sin stock"}
           </p>
         </CardFooter>
       </Card>

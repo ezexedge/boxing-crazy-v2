@@ -417,7 +417,14 @@ export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
                       : "Sin stock para esta combinación"}
                   </p>
                 </div>
-              ) : selectedColor && hasTalles && !selectedTalle ? null : (
+              ) : selectedColor && hasTalles ? (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    {getStockForColor(selectedColor)} unidades disponibles en {getColorByHex(selectedColor)?.name || "este color"}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Selecciona un talle para ver stock específico</p>
+                </div>
+              ) : (
                 <p className="text-sm text-neutral-600">
                   {totalStock > 0 ? `Stock total: ${totalStock} unidades` : "Sin stock"}
                 </p>
