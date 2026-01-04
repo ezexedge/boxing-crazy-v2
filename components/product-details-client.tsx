@@ -457,52 +457,61 @@ export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
             </div>
           </div>
 
-          {/* Agregar al carrito */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleAddToCart}
-                  disabled={isButtonDisabled}
-                >
-                  {hasVariantes && totalStock === 0
-                    ? "Sin Stock"
-                    : hasVariantes && selectedStock === 0 && selectedColor && selectedTalle
-                    ? "Sin Stock para esta combinación"
-                    : "Agregar al Carrito"}
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {isButtonDisabled && tooltipMessage && (
-              <TooltipContent>
-                <p>{tooltipMessage}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+          {/* Agregar al carrito - Solo mostrar si hay stock total */}
+          {totalStock > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={isButtonDisabled}
+                  >
+                    {hasVariantes && selectedStock === 0 && selectedColor && selectedTalle
+                      ? "Sin Stock para esta combinación"
+                      : "Agregar al Carrito"}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isButtonDisabled && tooltipMessage && (
+                <TooltipContent>
+                  <p>{tooltipMessage}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )}
 
-          {/* Comprar ahora */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  variant="outline"
-                  onClick={handleBuyNow}
-                  disabled={isButtonDisabled}
-                >
-                  Comprar Ahora
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {isButtonDisabled && tooltipMessage && (
-              <TooltipContent>
-                <p>{tooltipMessage}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+          {/* Comprar ahora - Solo mostrar si hay stock total */}
+          {totalStock > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    variant="outline"
+                    onClick={handleBuyNow}
+                    disabled={isButtonDisabled}
+                  >
+                    Comprar Ahora
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isButtonDisabled && tooltipMessage && (
+                <TooltipContent>
+                  <p>{tooltipMessage}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )}
+
+          {/* Mensaje cuando no hay stock */}
+          {totalStock === 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 font-semibold text-center">Producto sin stock</p>
+            </div>
+          )}
         </div>
       </div>
     </main>
