@@ -31,6 +31,7 @@ export default function AdminProductosPage() {
   })
   const [variantes, setVariantes] = useState<Array<{ color: string; talle: string; stock: number }>>([])
   const [newVariante, setNewVariante] = useState({ color: "", talle: "", stock: "" })
+  const [varianteError, setVarianteError] = useState("")
   const [imagenes, setImagenes] = useState<string[]>([])
   const [imagenPortada, setImagenPortada] = useState<string>("")
   const [isUploading, setIsUploading] = useState(false)
@@ -87,17 +88,36 @@ export default function AdminProductosPage() {
   }
 
   const addVariante = () => {
-    if (newVariante.color && newVariante.talle && newVariante.stock) {
-      setVariantes([
-        ...variantes,
-        {
-          color: newVariante.color,
-          talle: newVariante.talle,
-          stock: Number.parseInt(newVariante.stock),
-        },
-      ])
-      setNewVariante({ color: "", talle: "", stock: "" })
+    // Validar que todos los campos estén completos
+    const errors: string[] = []
+
+    if (!newVariante.color) {
+      errors.push("color")
     }
+    if (!newVariante.talle) {
+      errors.push("talle")
+    }
+    if (!newVariante.stock || Number.parseInt(newVariante.stock) <= 0) {
+      errors.push("stock")
+    }
+
+    if (errors.length > 0) {
+      const errorMessage = `Debes completar: ${errors.join(", ")}`
+      setVarianteError(errorMessage)
+      return
+    }
+
+    // Agregar la variante
+    setVariantes([
+      ...variantes,
+      {
+        color: newVariante.color,
+        talle: newVariante.talle,
+        stock: Number.parseInt(newVariante.stock),
+      },
+    ])
+    setNewVariante({ color: "", talle: "", stock: "" })
+    setVarianteError("")
   }
 
   const removeVariante = (index: number) => {
@@ -203,6 +223,7 @@ export default function AdminProductosPage() {
     })
     setVariantes([])
     setNewVariante({ color: "", talle: "", stock: "" })
+    setVarianteError("")
     setImagenes([])
     setImagenPortada("")
   }
@@ -371,7 +392,10 @@ export default function AdminProductosPage() {
                     <Label>Color</Label>
                     <ColorPicker
                       selectedColor={newVariante.color}
-                      onColorSelect={(hex) => setNewVariante({ ...newVariante, color: hex })}
+                      onColorSelect={(hex) => {
+                        setNewVariante({ ...newVariante, color: hex })
+                        setVarianteError("")
+                      }}
                     />
                     {newVariante.color && (
                       <p className="text-sm text-neutral-600">
@@ -383,7 +407,10 @@ export default function AdminProductosPage() {
                   <div className="grid grid-cols-3 gap-2">
                     <Select
                       value={newVariante.talle}
-                      onValueChange={(value) => setNewVariante({ ...newVariante, talle: value })}
+                      onValueChange={(value) => {
+                        setNewVariante({ ...newVariante, talle: value })
+                        setVarianteError("")
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar talle" />
@@ -410,13 +437,22 @@ export default function AdminProductosPage() {
                       placeholder="Stock"
                       type="number"
                       value={newVariante.stock}
-                      onChange={(e) => setNewVariante({ ...newVariante, stock: e.target.value })}
+                      onChange={(e) => {
+                        setNewVariante({ ...newVariante, stock: e.target.value })
+                        setVarianteError("")
+                      }}
                     />
                     <Button type="button" onClick={addVariante} variant="outline">
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar
                     </Button>
                   </div>
+
+                  {varianteError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm text-red-800 font-medium">{varianteError}</p>
+                    </div>
+                  )}
                 </div>
 
                 {variantes.length > 0 && (
