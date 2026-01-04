@@ -35,6 +35,7 @@ export default function AdminProductosPage() {
   const [imagenes, setImagenes] = useState<string[]>([])
   const [imagenPortada, setImagenPortada] = useState<string>("")
   const [isUploading, setIsUploading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { startUpload } = useUploadThing("productImages")
 
@@ -127,6 +128,11 @@ export default function AdminProductosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Prevenir múltiples envíos
+    if (isSubmitting) {
+      return
+    }
+
     if (imagenes.length === 0) {
       alert("Por favor sube al menos una imagen")
       return
@@ -145,6 +151,7 @@ export default function AdminProductosPage() {
       variantes: variantes,
     }
 
+    setIsSubmitting(true)
     try {
       const url = editingProducto ? `/api/admin/productos/${editingProducto.id}` : "/api/admin/productos"
       const method = editingProducto ? "PUT" : "POST"
@@ -169,6 +176,8 @@ export default function AdminProductosPage() {
     } catch (error) {
       console.error("[v0] Save producto error:", error)
       alert("Error al guardar producto")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -226,6 +235,7 @@ export default function AdminProductosPage() {
     setVarianteError("")
     setImagenes([])
     setImagenPortada("")
+    setIsSubmitting(false)
   }
 
   const getTotalStock = (producto: Producto) => {
@@ -482,8 +492,10 @@ export default function AdminProductosPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isUploading}>
-                {editingProducto ? "Actualizar" : "Crear"} Producto
+              <Button type="submit" className="w-full" disabled={isUploading || isSubmitting}>
+                {isSubmitting
+                  ? (editingProducto ? "Actualizando..." : "Creando...")
+                  : (editingProducto ? "Actualizar" : "Crear") + " Producto"}
               </Button>
             </form>
           </DialogContent>
