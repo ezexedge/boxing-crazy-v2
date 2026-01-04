@@ -9,10 +9,13 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ producto }: ProductCardProps) {
-
-  console.log("producto",producto)
   const totalStock = producto.Variante?.reduce((sum, variante) => sum + variante.stock, 0) || 0
   const availableColors = [...new Set(producto.Variante?.map((v) => v.color) || [])]
+
+  console.log("[Product Card] Stock calculation for", producto.nombre, {
+    variantes: producto.Variante?.map(v => ({ color: v.color, talle: v.talle, stock: v.stock })),
+    totalStock
+  })
 
   return (
     <Link href={`/producto/${producto.id}`} className="h-full">
