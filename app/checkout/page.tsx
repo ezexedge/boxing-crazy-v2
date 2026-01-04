@@ -94,14 +94,9 @@ export default function CheckoutPage() {
   }
 
   const handleCheckout = async () => {
-    // Validate form
-
-    console.log("{ items, billingAddress: formData }",{ items, billingAddress: formData })
- 
-
     setIsLoading(true)
     setError("")
-console.log("xxxxx")
+
     try {
       const response = await fetch("/api/checkout/create", {
         method: "POST",

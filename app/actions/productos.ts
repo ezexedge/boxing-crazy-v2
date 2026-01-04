@@ -58,7 +58,6 @@ export async function getProductoById(id: string) {
       },
     })
 
-    console.log("producto",producto)
     if (!producto) {
       return { success: false, error: "Producto no encontrado" }
     }

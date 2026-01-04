@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Only verify if it's been more than 5 minutes since last verification
         if (now - lastVerified > fiveMinutes) {
-          console.log("[Auth] Page visible, verifying token")
           fetchUser(token)
           setLastVerified(now)
         }
@@ -65,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json()
         setUser(data.user)
         setLastVerified(Date.now())
-        console.log("[Auth] User loaded successfully")
       } else if (response.status === 401) {
         // Token is invalid or expired
         console.warn("[Auth] Token invalid or expired, clearing session")

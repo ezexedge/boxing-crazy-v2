@@ -26,7 +26,6 @@ export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
   const [mensajeStock, setMensajeStock] = useState<string>("")
   const [mensajeTalle, setMensajeTalle] = useState<string>("")
 
-  console.log("producto",producto)
   // Auto-select if only one option
   useEffect(() => {
     if (producto.Variante && producto.Variante.length === 1) {
@@ -84,24 +83,12 @@ export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
 
   const getTotalStock = () => {
     if (!producto?.Variante) return 0
-    const total = producto.Variante.reduce((sum, v) => sum + v.stock, 0)
-    console.log("[Stock Debug] Total stock calculation:", {
-      variantes: producto.Variante.map(v => ({ color: v.color, talle: v.talle, stock: v.stock })),
-      total
-    })
-    return total
+    return producto.Variante.reduce((sum, v) => sum + v.stock, 0)
   }
 
   const getStockForColor = (color: string) => {
     if (!producto?.Variante) return 0
-    const variantesDelColor = producto.Variante.filter((v) => v.color === color)
-    const stockDelColor = variantesDelColor.reduce((sum, v) => sum + v.stock, 0)
-    console.log("[Stock Debug] Stock for color:", {
-      color,
-      variantes: variantesDelColor.map(v => ({ talle: v.talle, stock: v.stock })),
-      total: stockDelColor
-    })
-    return stockDelColor
+    return producto.Variante.filter((v) => v.color === color).reduce((sum, v) => sum + v.stock, 0)
   }
 
   const getTalleStockForColor = (talle: string) => {
