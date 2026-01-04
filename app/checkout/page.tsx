@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -332,7 +333,7 @@ export default function CheckoutPage() {
                 {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4 text-sm">{error}</div>}
 
                 <Button
-                  className="w-full"
+                  className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
                   size="lg"
                   onClick={handleCheckout}
                   disabled={isLoading || !isFormValid()}
@@ -343,7 +344,16 @@ export default function CheckoutPage() {
                       Redireccionando a MercadoPago...
                     </>
                   ) : (
-                    "Pagar con MercadoPago"
+                    <span className="flex items-center justify-center">
+                      Proceder a pagar con
+                      <Image
+                        src="/mp-logo.svg"
+                        alt="MercadoPago"
+                        width={100}
+                        height={24}
+                        className="ml-2"
+                      />
+                    </span>
                   )}
                 </Button>
 

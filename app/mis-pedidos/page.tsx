@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, ArrowLeft, RefreshCw, CreditCard } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { Header } from "@/components/header"
 
 interface PedidoItem {
   id: string
@@ -50,6 +51,7 @@ export default function MisPedidosPage() {
   const router = useRouter()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
+  const [retryingPayment, setRetryingPayment] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -82,6 +84,31 @@ export default function MisPedidosPage() {
     }
   }
 
+  const handleRetryPayment = async (pedidoId: string) => {
+    setRetryingPayment(pedidoId)
+    try {
+      const response = await fetch(`/api/pedidos/${pedidoId}/retry-payment`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al reintentar el pago")
+      }
+
+      const data = await response.json()
+      // Redirigir a MercadoPago
+      window.location.href = data.initPoint
+    } catch (error) {
+      console.error("Error al reintentar pago:", error)
+      alert(error instanceof Error ? error.message : "Error al reintentar el pago")
+      setRetryingPayment(null)
+    }
+  }
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -96,8 +123,15 @@ export default function MisPedidosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
+          <Button variant="ghost" asChild className="mb-4">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver a la Tienda
+            </Link>
+          </Button>
           <h1 className="text-3xl font-bold mb-2">Mis Pedidos</h1>
           <p className="text-gray-600">Consulta el estado de tus compras</p>
         </div>
@@ -184,6 +218,77 @@ export default function MisPedidosPage() {
                         <span className="font-semibold">Total:</span>
                         <span className="text-xl font-bold">${pedido.total.toFixed(2)}</span>
                       </div>
+
+                      {/* Botones de acción según el estado */}
+                      {(pedido.estado === "fallido" || pedido.estado === "cancelado") && (
+                        <div className="border-t pt-4 space-y-2">
+                          <p className="text-sm text-gray-600 mb-3">
+                            {pedido.estado === "fallido"
+                              ? "Tu pago no pudo ser procesado. Puedes intentar nuevamente."
+                              : "Este pedido fue cancelado. Puedes realizar un nuevo pedido."}
+                          </p>
+                          <Button
+                            className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
+                            onClick={() => handleRetryPayment(pedido.id)}
+                            disabled={retryingPayment === pedido.id}
+                          >
+                            {retryingPayment === pedido.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Redireccionando...
+                              </>
+                            ) : (
+                              <span className="flex items-center justify-center">
+                                Pagar con
+                                <Image
+                                  src="/mp-logo.svg"
+                                  alt="MercadoPago"
+                                  width={100}
+                                  height={24}
+                                  className="ml-2"
+                                />
+                              </span>
+                            )}
+                          </Button>
+                          <Button variant="outline" className="w-full bg-transparent" asChild>
+                            <Link href="/">
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Volver a la Tienda
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+
+                      {pedido.estado === "pendiente" && (
+                        <div className="border-t pt-4 space-y-2">
+                          <p className="text-sm text-gray-600 mb-3">
+                            Tu pedido está esperando el pago. Completa el pago para procesar tu orden.
+                          </p>
+                          <Button
+                            className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
+                            onClick={() => handleRetryPayment(pedido.id)}
+                            disabled={retryingPayment === pedido.id}
+                          >
+                            {retryingPayment === pedido.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Redireccionando...
+                              </>
+                            ) : (
+                              <span className="flex items-center justify-center">
+                                Pagar con
+                                <Image
+                                  src="/mp-logo.svg"
+                                  alt="MercadoPago"
+                                  width={100}
+                                  height={24}
+                                  className="ml-2"
+                                />
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
