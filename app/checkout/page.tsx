@@ -52,7 +52,8 @@ export default function CheckoutPage() {
       return
     }
 
-    if (items.length === 0) {
+    // Don't redirect if loading (to avoid showing empty cart during MercadoPago redirect)
+    if (items.length === 0 && !isLoading) {
       router.push("/carrito")
       return
     }
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
     if (user.email) {
       setFormData((prev) => ({ ...prev, email: user.email }))
     }
-  }, [user, items, router])
+  }, [user, items, router, isLoading])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -119,10 +120,8 @@ console.log("xxxxx")
 
       const data = await response.json()
 
-      // Clear cart before redirect
-      clearCart()
-
-      // Redirect to MercadoPago
+      // Redirect to MercadoPago (cart will be cleared after successful payment)
+      // DO NOT clear cart here to avoid showing "empty cart" during redirect
       window.location.href = data.initPoint
     } catch (err: any) {
       console.error("Checkout error:", err)
@@ -346,7 +345,7 @@ console.log("xxxxx")
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Procesando...
+                      Redireccionando a MercadoPago...
                     </>
                   ) : (
                     "Pagar con MercadoPago"
