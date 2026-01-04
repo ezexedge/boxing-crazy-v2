@@ -8,7 +8,19 @@ export const revalidate = 0
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    // Leer el body como texto primero para debugging
+    const text = await request.text()
+    console.log("[MercadoPago Webhook] Raw body:", text)
+
+    // Intentar parsear el JSON
+    let body
+    try {
+      body = text ? JSON.parse(text) : {}
+    } catch (parseError) {
+      console.error("[MercadoPago Webhook] JSON parse error:", parseError)
+      console.error("[MercadoPago Webhook] Body text:", text)
+      return new Response(null, { status: 200 })
+    }
 
     console.log("[MercadoPago Webhook] Received webhook:", JSON.stringify(body, null, 2))
 
