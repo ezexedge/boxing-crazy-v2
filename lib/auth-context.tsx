@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [lastVerified, setLastVerified] = useState<number>(0)
 
   useEffect(() => {
     // Load token from localStorage on mount
@@ -30,6 +31,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Verify token is still valid when user interacts with the page
+  useEffect(() => {
+    if (!token) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && token) {
+        const now = Date.now()
+        const fiveMinutes = 5 * 60 * 1000
+
+        // Only verify if it's been more than 5 minutes since last verification
+        if (now - lastVerified > fiveMinutes) {
+          console.log("[Auth] Page visible, verifying token")
+          fetchUser(token)
+          setLastVerified(now)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [token, lastVerified])
+
   const fetchUser = async (authToken: string) => {
     try {
       const response = await fetch("/api/auth/me", {
@@ -41,14 +64,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
-      } else {
+        setLastVerified(Date.now())
+        console.log("[Auth] User loaded successfully")
+      } else if (response.status === 401) {
+        // Token is invalid or expired
+        console.warn("[Auth] Token invalid or expired, clearing session")
         localStorage.removeItem("token")
         setToken(null)
+        setUser(null)
+      } else {
+        // Server error or other issue - keep token and retry later
+        console.error("[Auth] Server error fetching user, status:", response.status)
+        // Don't clear token on server errors
       }
     } catch (error) {
-      console.error("[v0] Fetch user error:", error)
-      localStorage.removeItem("token")
-      setToken(null)
+      // Network error - keep token and retry later
+      console.error("[Auth] Network error fetching user:", error)
+      // Don't clear token on network errors
     } finally {
       setIsLoading(false)
     }
