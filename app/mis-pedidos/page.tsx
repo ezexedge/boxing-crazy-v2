@@ -52,6 +52,7 @@ export default function MisPedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [retryingPayment, setRetryingPayment] = useState<string | null>(null)
+  const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -106,6 +107,47 @@ export default function MisPedidosPage() {
       console.error("Error al reintentar pago:", error)
       alert(error instanceof Error ? error.message : "Error al reintentar el pago")
       setRetryingPayment(null)
+    }
+  }
+
+  const handleVerifyPayment = async (pedidoId: string) => {
+    setVerifyingPayment(pedidoId)
+    try {
+      const response = await fetch("/api/payment/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pedidoId }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        if (result.status === "pagado") {
+          alert("¡Pago verificado exitosamente! El stock ha sido actualizado.")
+          // Recargar pedidos
+          await fetchPedidos()
+        } else if (result.alreadyProcessed) {
+          alert(`El pago ya fue procesado anteriormente. Estado: ${result.status}`)
+          await fetchPedidos()
+        } else if (result.verified === false) {
+          alert(
+            "No se encontró el pago en MercadoPago. Es posible que aún no hayas completado el pago o que esté siendo procesado."
+          )
+        } else {
+          alert(`Estado del pago: ${result.status}`)
+          await fetchPedidos()
+        }
+      } else {
+        throw new Error(result.error || "Error al verificar el pago")
+      }
+    } catch (error) {
+      console.error("Error al verificar pago:", error)
+      alert(error instanceof Error ? error.message : "Error al verificar el pago")
+    } finally {
+      setVerifyingPayment(null)
     }
   }
 
@@ -267,7 +309,7 @@ export default function MisPedidosPage() {
                           <Button
                             className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
                             onClick={() => handleRetryPayment(pedido.id)}
-                            disabled={retryingPayment === pedido.id}
+                            disabled={retryingPayment === pedido.id || verifyingPayment === pedido.id}
                           >
                             {retryingPayment === pedido.id ? (
                               <>
@@ -287,6 +329,35 @@ export default function MisPedidosPage() {
                               </span>
                             )}
                           </Button>
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                              <span className="bg-white px-2 text-muted-foreground">o</span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="w-full bg-transparent"
+                            onClick={() => handleVerifyPayment(pedido.id)}
+                            disabled={retryingPayment === pedido.id || verifyingPayment === pedido.id}
+                          >
+                            {verifyingPayment === pedido.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Verificando...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Verificar si ya pagué
+                              </>
+                            )}
+                          </Button>
+                          <p className="text-xs text-gray-500 text-center mt-2">
+                            ¿Ya pagaste pero el estado no se actualizó? Haz clic en "Verificar si ya pagué"
+                          </p>
                         </div>
                       )}
                     </div>

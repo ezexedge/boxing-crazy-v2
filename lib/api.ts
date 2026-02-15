@@ -98,7 +98,6 @@ const api = {
       if (!baseUrl) {
         throw new Error("NEXT_PUBLIC_BASE_URL no configurada")
       }
-      const isProduction = baseUrl.startsWith("https://")
 
       const preferenceData: any = {
         items: items.map((item) => ({
@@ -118,15 +117,10 @@ const api = {
           failure: `${baseUrl}/checkout/failure?pedidoId=${pedido.id}`,
           pending: `${baseUrl}/checkout/pending?pedidoId=${pedido.id}`,
         },
-        // Guardamos el pedidoId en metadata para vincularlo en el webhook
+        // Guardamos el pedidoId en metadata para vincularlo en la verificación
         metadata: {
           pedidoId: pedido.id,
         },
-      }
-
-      // Solo agregar notification_url en producción (URLs públicas)
-      if (isProduction) {
-        preferenceData.notification_url = `${baseUrl}/api/mercadopago/pagos`
       }
 
       console.log("[API] Creating preference with data:", JSON.stringify(preferenceData, null, 2))
@@ -276,6 +270,68 @@ const api = {
         status: payment.status,
         statusDetail: payment.status_detail,
         metadata: payment.metadata,
+      }
+    },
+
+    /**
+     * Verifica el pago por pedidoId buscando en MercadoPago
+     * Útil cuando no tenemos el paymentId pero sí el pedidoId
+     */
+    async verifyByPedidoId(pedidoId: string) {
+      const pedido = await prisma.pedido.findUnique({
+        where: { id: pedidoId },
+        include: { PedidoItem: true },
+      })
+
+      if (!pedido) {
+        throw new Error("Pedido no encontrado")
+      }
+
+      if (!pedido.mercadopagoId) {
+        throw new Error("Pedido sin preferencia de pago asociada")
+      }
+
+      // Si el pedido ya fue procesado, retornar su estado actual
+      if (pedido.estado !== "pendiente") {
+        console.log("[API] Pedido already processed:", pedidoId, "Estado:", pedido.estado)
+        return { pedidoId, status: pedido.estado, alreadyProcessed: true }
+      }
+
+      // Buscar el pago asociado a esta preferencia en MercadoPago
+      const paymentClient = new Payment(mercadopago)
+
+      try {
+        // Buscar pagos recientes que puedan estar asociados a este pedido
+        const searchResult = await paymentClient.search({
+          options: {
+            criteria: "desc",
+            range: "date_created",
+            begin_date: new Date(pedido.createdAt.getTime() - 60000).toISOString(), // 1 min antes
+            end_date: new Date(Date.now() + 60000).toISOString(), // 1 min después de ahora
+          },
+        })
+
+        console.log("[API] Found payments:", searchResult.results?.length || 0)
+
+        // Buscar pago que coincida con el pedidoId en metadata o con la preferenceId
+        const payment = searchResult.results?.find(
+          (p: any) =>
+            p.metadata?.pedidoId === pedidoId ||
+            p.metadata?.pedido_id === pedidoId ||
+            p.additional_info?.items?.some((item: any) => item.id === pedido.mercadopagoId)
+        )
+
+        if (payment) {
+          console.log("[API] Payment found for pedidoId:", pedidoId, "paymentId:", payment.id)
+          // Procesar el pago encontrado
+          return await this.processWebhook(String(payment.id))
+        } else {
+          console.log("[API] No payment found for pedidoId:", pedidoId)
+          return { pedidoId, status: pedido.estado, verified: false }
+        }
+      } catch (error) {
+        console.error("[API] Error searching for payment:", error)
+        throw error
       }
     },
   },
