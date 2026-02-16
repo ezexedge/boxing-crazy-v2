@@ -2,8 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { AuthProvider } from "@/lib/auth-context"
-import { CartProvider } from "@/lib/cart-context"
+import { Providers } from "@/lib/providers"
 import { WhatsAppButton } from "@/components/whatsapp-button"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -22,13 +21,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className} suppressHydrationWarning>
-        <AuthProvider>
-          <CartProvider>
-            {children}
-            <WhatsAppButton />
-            <Toaster />
-          </CartProvider>
-        </AuthProvider>
+        <Providers>
+          {children}
+          <WhatsAppButton />
+          <Toaster />
+        </Providers>
       </body>
     </html>
   )

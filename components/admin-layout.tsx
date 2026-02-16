@@ -5,13 +5,15 @@ import type React from "react"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Package, ShoppingBag, LogOut, Home } from "lucide-react"
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { user, logout, isLoading } = useAuth()
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  const isLoading = useAuthStore((state) => state.isLoading)
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "admin")) {

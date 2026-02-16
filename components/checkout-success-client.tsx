@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react"
-import { useCart } from "@/lib/cart-context"
+import { useCartStore } from "@/lib/stores/cart-store"
 
 interface CheckoutSuccessClientProps {
   pedidoId: string | null
@@ -13,7 +13,7 @@ interface CheckoutSuccessClientProps {
 export function CheckoutSuccessClient({ pedidoId }: CheckoutSuccessClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { clearCart } = useCart()
+  const clearCart = useCartStore((state) => state.clearCart)
 
   const [verifying, setVerifying] = useState(true)
   const [error, setError] = useState<string | null>(null)

@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react"
 import { AdminLayout } from "@/components/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Package, ShoppingBag, DollarSign, CheckCircle } from "lucide-react"
 
 export default function AdminDashboard() {
-  const { token } = useAuth()
+  const token = useAuthStore((state) => state.token)
   const [stats, setStats] = useState({
     totalProductos: 0,
     totalPedidos: 0,

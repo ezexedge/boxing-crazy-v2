@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { useCartStore } from "@/lib/stores/cart-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, ArrowLeft, RefreshCw, CreditCard } from "lucide-react"
+import { Loader2, ArrowLeft, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { Header } from "@/components/header"
@@ -47,12 +48,15 @@ const estadoConfig = {
 }
 
 export default function MisPedidosPage() {
-  const { user, token, isLoading } = useAuth()
+  const user = useAuthStore((state) => state.user)
+  const token = useAuthStore((state) => state.token)
+  const isLoading = useAuthStore((state) => state.isLoading)
+  const clearCart = useCartStore((state) => state.clearCart)
   const router = useRouter()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [retryingPayment, setRetryingPayment] = useState<string | null>(null)
-  const [verifyingPayment, setVerifyingPayment] = useState<string | null>(null)
+  const [hasVerified, setHasVerified] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -77,11 +81,70 @@ export default function MisPedidosPage() {
       if (response.ok) {
         const data = await response.json()
         setPedidos(data.pedidos)
+
+        // Limpiar carrito si hay pedidos pagados recientes (últimas 24 horas)
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        const recentPaidOrders = data.pedidos.filter(
+          (p: Pedido) => p.estado === "pagado" && new Date(p.createdAt) > twentyFourHoursAgo
+        )
+        if (recentPaidOrders.length > 0) {
+          clearCart()
+        }
+
+        // Verificar automáticamente pedidos pendientes solo una vez
+        if (!hasVerified) {
+          const pedidosPendientes = data.pedidos.filter((p: Pedido) => p.estado === "pendiente")
+          if (pedidosPendientes.length > 0) {
+            await verifyPendingOrders(pedidosPendientes)
+          }
+          setHasVerified(true)
+        }
       }
     } catch (error) {
       console.error("Error al cargar pedidos:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const verifyPendingOrders = async (pedidosPendientes: Pedido[]) => {
+    let hasPaidOrder = false
+
+    // Verificar todos los pedidos pendientes
+    for (const pedido of pedidosPendientes) {
+      try {
+        const response = await fetch("/api/payment/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ pedidoId: pedido.id }),
+        })
+
+        const result = await response.json()
+
+        if (response.ok && (result.status === "pagado" || result.alreadyProcessed)) {
+          hasPaidOrder = true
+          // Recargar pedidos si alguno se actualizó
+          const updatedResponse = await fetch("/api/pedidos", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+          if (updatedResponse.ok) {
+            const updatedData = await updatedResponse.json()
+            setPedidos(updatedData.pedidos)
+          }
+        }
+      } catch (error) {
+        console.error(`Error al verificar pedido ${pedido.id}:`, error)
+      }
+    }
+
+    // Limpiar carrito si algún pedido fue pagado
+    if (hasPaidOrder) {
+      clearCart()
     }
   }
 
@@ -107,47 +170,6 @@ export default function MisPedidosPage() {
       console.error("Error al reintentar pago:", error)
       alert(error instanceof Error ? error.message : "Error al reintentar el pago")
       setRetryingPayment(null)
-    }
-  }
-
-  const handleVerifyPayment = async (pedidoId: string) => {
-    setVerifyingPayment(pedidoId)
-    try {
-      const response = await fetch("/api/payment/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pedidoId }),
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        if (result.status === "pagado") {
-          alert("¡Pago verificado exitosamente! El stock ha sido actualizado.")
-          // Recargar pedidos
-          await fetchPedidos()
-        } else if (result.alreadyProcessed) {
-          alert(`El pago ya fue procesado anteriormente. Estado: ${result.status}`)
-          await fetchPedidos()
-        } else if (result.verified === false) {
-          alert(
-            "No se encontró el pago en MercadoPago. Es posible que aún no hayas completado el pago o que esté siendo procesado."
-          )
-        } else {
-          alert(`Estado del pago: ${result.status}`)
-          await fetchPedidos()
-        }
-      } else {
-        throw new Error(result.error || "Error al verificar el pago")
-      }
-    } catch (error) {
-      console.error("Error al verificar pago:", error)
-      alert(error instanceof Error ? error.message : "Error al verificar el pago")
-    } finally {
-      setVerifyingPayment(null)
     }
   }
 
@@ -309,7 +331,7 @@ export default function MisPedidosPage() {
                           <Button
                             className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
                             onClick={() => handleRetryPayment(pedido.id)}
-                            disabled={retryingPayment === pedido.id || verifyingPayment === pedido.id}
+                            disabled={retryingPayment === pedido.id}
                           >
                             {retryingPayment === pedido.id ? (
                               <>
@@ -329,35 +351,6 @@ export default function MisPedidosPage() {
                               </span>
                             )}
                           </Button>
-                          <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                              <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                              <span className="bg-white px-2 text-muted-foreground">o</span>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="w-full bg-transparent"
-                            onClick={() => handleVerifyPayment(pedido.id)}
-                            disabled={retryingPayment === pedido.id || verifyingPayment === pedido.id}
-                          >
-                            {verifyingPayment === pedido.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Verificando...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Verificar si ya pagué
-                              </>
-                            )}
-                          </Button>
-                          <p className="text-xs text-gray-500 text-center mt-2">
-                            ¿Ya pagaste pero el estado no se actualizó? Haz clic en "Verificar si ya pagué"
-                          </p>
                         </div>
                       )}
                     </div>

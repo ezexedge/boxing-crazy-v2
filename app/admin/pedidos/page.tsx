@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { AdminLayout } from "@/components/admin-layout"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface PedidoWithDetails {
@@ -27,7 +27,7 @@ interface PedidoWithDetails {
 }
 
 export default function AdminPedidosPage() {
-  const { token } = useAuth()
+  const token = useAuthStore((state) => state.token)
   const [pedidos, setPedidos] = useState<PedidoWithDetails[]>([])
 
   useEffect(() => {

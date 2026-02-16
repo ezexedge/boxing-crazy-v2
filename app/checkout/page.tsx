@@ -7,15 +7,18 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useCart } from "@/lib/cart-context"
-import { useAuth } from "@/lib/auth-context"
+import { useCartStore } from "@/lib/stores/cart-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Loader2 } from "lucide-react"
 import { billingAddressSchema, type BillingAddress } from "@/lib/validations/billing"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, total, clearCart } = useCart()
-  const { user, token } = useAuth()
+  const items = useCartStore((state) => state.items)
+  const total = useCartStore((state) => state.total())
+  const clearCart = useCartStore((state) => state.clearCart)
+  const user = useAuthStore((state) => state.user)
+  const token = useAuthStore((state) => state.token)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})

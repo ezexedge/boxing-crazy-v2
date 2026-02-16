@@ -5,14 +5,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { useCart } from "@/lib/cart-context"
-import { useAuth } from "@/lib/auth-context"
+import { useCartStore } from "@/lib/stores/cart-store"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Trash2, Minus, Plus } from "lucide-react"
 
 export default function CarritoPage() {
   const router = useRouter()
-  const { items, removeItem, updateQuantity, total } = useCart()
-  const { user } = useAuth()
+  const items = useCartStore((state) => state.items)
+  const removeItem = useCartStore((state) => state.removeItem)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const total = useCartStore((state) => state.total())
+  const user = useAuthStore((state) => state.user)
 
   const handleCheckout = () => {
     if (!user) {

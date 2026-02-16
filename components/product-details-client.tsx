@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import type { Producto } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { useCart } from "@/lib/cart-context"
+import { useCartStore } from "@/lib/stores/cart-store"
 import { ChevronLeft, Minus, Plus } from "lucide-react"
 import { ImageZoom } from "@/components/image-zoom"
 import { getColorByHex } from "@/lib/colors"
@@ -18,7 +18,7 @@ interface ProductDetailsClientProps {
 
 export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
   const router = useRouter()
-  const { addItem } = useCart()
+  const addItem = useCartStore((state) => state.addItem)
   const [selectedColor, setSelectedColor] = useState<string>("")
   const [selectedTalle, setSelectedTalle] = useState<string>("")
   const [cantidad, setCantidad] = useState(1)
@@ -214,7 +214,7 @@ export function ProductDetailsClient({ producto }: ProductDetailsClientProps) {
       imagen: producto.imagenPortada || producto.imagenes[0],
     })
 
-    router.push("/carrito")
+    router.push("/checkout")
   }
 
   const availableColors = getAvailableColors()

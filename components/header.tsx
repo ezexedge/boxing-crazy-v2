@@ -2,18 +2,19 @@
 
 import Link from "next/link"
 import { ShoppingCart, User, LogOut, Package } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { useCartStore } from "@/lib/stores/cart-store"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useCart } from "@/lib/cart-context"
 import { SearchBar } from "@/components/search-bar"
 
 const CATEGORIAS_HOMBRE = ["remeras", "shorts", "buzos"]
 const CATEGORIAS_MUJER = ["tops", "shorts", "buzos"]
 
 export function Header() {
-  const { user, logout } = useAuth()
-  const { items } = useCart()
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+  const items = useCartStore((state) => state.items)
 
   const totalItems = items.reduce((sum, item) => sum + item.cantidad, 0)
 

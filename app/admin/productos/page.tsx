@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { AdminLayout } from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import type { Producto } from "@/lib/types"
 import { Plus, Pencil, Trash2, X, Upload, Star } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -18,7 +18,7 @@ import { ColorPicker } from "@/components/color-picker"
 import { getColorByHex } from "@/lib/colors"
 
 export default function AdminProductosPage() {
-  const { token } = useAuth()
+  const token = useAuthStore((state) => state.token)
   const [productos, setProductos] = useState<Producto[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null)
