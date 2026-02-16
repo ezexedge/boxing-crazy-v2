@@ -1,6 +1,7 @@
 import { MercadoPagoConfig, Preference, Payment } from "mercadopago"
 import { prisma } from "@/lib/db"
 import { randomUUID } from "crypto"
+import { revalidatePath } from "next/cache"
 
 // Configuración de MercadoPago
 export const mercadopago = new MercadoPagoConfig({
@@ -36,8 +37,20 @@ const api = {
      * Crea una preferencia de pago en MercadoPago y un pedido en la DB
      */
     async submit(userId: string, items: CheckoutItem[], billingAddress: BillingAddress) {
-      // Verificar stock antes de crear el pedido
+      // Verificar que los productos estén activos y tengan stock antes de crear el pedido
       for (const item of items) {
+        // Verificar que el producto esté activo (no eliminado)
+        const producto = await prisma.producto.findFirst({
+          where: {
+            id: item.productoId,
+            activo: true,
+          },
+        })
+
+        if (!producto) {
+          throw new Error(`El producto ${item.nombre} ya no está disponible`)
+        }
+
         if (item.color && item.talle) {
           const variante = await prisma.variante.findFirst({
             where: {
@@ -193,31 +206,89 @@ const api = {
       if (payment.status === "approved") {
         nuevoEstado = "pagado"
 
-        // Actualizar estado del pedido
-        await prisma.pedido.update({
-          where: { id: pedidoId },
-          data: {
-            estado: nuevoEstado,
-            updatedAt: new Date(),
-          },
-        })
+        // Usar una transacción para evitar race conditions
+        // Solo actualizar el pedido si sigue en estado pendiente
+        const updated = await prisma.$transaction(async (tx) => {
+          // Verificar nuevamente dentro de la transacción
+          const currentPedido = await tx.pedido.findUnique({
+            where: { id: pedidoId },
+            select: { estado: true },
+          })
 
-        console.log("[API] Pedido updated to 'pagado':", pedidoId)
+          // Si ya fue procesado por otra request, cancelar
+          if (!currentPedido || currentPedido.estado !== "pendiente") {
+            console.log("[API] Pedido already processed in transaction:", pedidoId)
+            return null
+          }
 
-        // Reducir stock solo si el pago fue aprobado
-        for (const item of pedido.PedidoItem) {
-          if (item.color && item.talle) {
-            // Verificar stock antes de decrementar
-            const variante = await prisma.variante.findFirst({
+          // Verificar que los productos estén activos y tengan stock ANTES de actualizar el pedido
+          const stockErrors: string[] = []
+          for (const item of pedido.PedidoItem) {
+            // Verificar que el producto esté activo (no eliminado)
+            const producto = await tx.producto.findFirst({
               where: {
-                productoId: item.productoId,
-                color: item.color,
-                talle: item.talle,
+                id: item.productoId,
+                activo: true,
               },
             })
 
-            if (variante && variante.stock >= item.cantidad) {
-              await prisma.variante.updateMany({
+            if (!producto) {
+              stockErrors.push(`Producto ${item.productoId} ya no está disponible`)
+              continue
+            }
+
+            if (item.color && item.talle) {
+              const variante = await tx.variante.findFirst({
+                where: {
+                  productoId: item.productoId,
+                  color: item.color,
+                  talle: item.talle,
+                },
+              })
+
+              if (!variante) {
+                stockErrors.push(
+                  `Producto ${item.productoId} (${item.color}, ${item.talle}) ya no existe`
+                )
+              } else if (variante.stock < item.cantidad) {
+                stockErrors.push(
+                  `Stock insuficiente para ${item.productoId} (${item.color}, ${item.talle}). Disponible: ${variante.stock}, solicitado: ${item.cantidad}`
+                )
+              }
+            }
+          }
+
+          // Si hay errores de stock, marcar pedido como fallido en lugar de pagado
+          if (stockErrors.length > 0) {
+            console.error("[API] Stock validation errors:", stockErrors)
+
+            await tx.pedido.update({
+              where: { id: pedidoId },
+              data: {
+                estado: "fallido",
+                updatedAt: new Date(),
+              },
+            })
+
+            console.log("[API] Pedido marked as 'fallido' due to stock issues:", pedidoId)
+            return { success: false, stockErrors }
+          }
+
+          // Actualizar estado del pedido a pagado
+          await tx.pedido.update({
+            where: { id: pedidoId },
+            data: {
+              estado: nuevoEstado,
+              updatedAt: new Date(),
+            },
+          })
+
+          console.log("[API] Pedido updated to 'pagado':", pedidoId)
+
+          // Reducir stock
+          for (const item of pedido.PedidoItem) {
+            if (item.color && item.talle) {
+              await tx.variante.updateMany({
                 where: {
                   productoId: item.productoId,
                   color: item.color,
@@ -229,14 +300,34 @@ const api = {
                   },
                 },
               })
-              console.log(`[API] Stock reduced for ${item.productoId} - ${item.color} - ${item.talle}`)
-            } else {
-              console.error(
-                `[API] Stock insuficiente para ${item.productoId} - ${item.color} - ${item.talle}. Stock disponible: ${variante?.stock || 0}, solicitado: ${item.cantidad}`
+              console.log(
+                `[API] Stock reduced for ${item.productoId} - ${item.color} - ${item.talle} by ${item.cantidad}`
               )
             }
           }
+
+          return { success: true }
+        })
+
+        // Si la transacción retornó null, significa que el pedido ya fue procesado
+        if (!updated) {
+          return { pedidoId, status: "pagado", alreadyProcessed: true }
         }
+
+        // Si hubo errores de stock, retornar error
+        if (typeof updated === "object" && "stockErrors" in updated && !updated.success) {
+          return {
+            pedidoId,
+            status: "fallido",
+            error: "Stock insuficiente",
+            stockErrors: updated.stockErrors,
+          }
+        }
+
+        // Revalidar páginas para que muestren el stock actualizado
+        revalidatePath("/")
+        revalidatePath("/producto/[id]", "page")
+        console.log("[API] Cache revalidated for home and product pages")
       } else if (payment.status === "rejected" || payment.status === "cancelled") {
         nuevoEstado = "fallido"
 
@@ -302,12 +393,13 @@ const api = {
 
       try {
         // Buscar pagos recientes que puedan estar asociados a este pedido
+        // Ampliar ventana de búsqueda a 30 minutos antes y 5 minutos después
         const searchResult = await paymentClient.search({
           options: {
             criteria: "desc",
             range: "date_created",
-            begin_date: new Date(pedido.createdAt.getTime() - 60000).toISOString(), // 1 min antes
-            end_date: new Date(Date.now() + 60000).toISOString(), // 1 min después de ahora
+            begin_date: new Date(pedido.createdAt.getTime() - 30 * 60000).toISOString(), // 30 min antes
+            end_date: new Date(Date.now() + 5 * 60000).toISOString(), // 5 min después de ahora
           },
         })
 
@@ -318,15 +410,17 @@ const api = {
           (p: any) =>
             p.metadata?.pedidoId === pedidoId ||
             p.metadata?.pedido_id === pedidoId ||
-            p.additional_info?.items?.some((item: any) => item.id === pedido.mercadopagoId)
+            p.additional_info?.items?.some((item: any) => item.id === pedido.mercadopagoId) ||
+            // También buscar por preference_id si está disponible
+            p.additional_info?.preference_id === pedido.mercadopagoId
         )
 
         if (payment) {
-          console.log("[API] Payment found for pedidoId:", pedidoId, "paymentId:", payment.id)
+          console.log("[API] Payment found for pedidoId:", pedidoId, "paymentId:", payment.id, "status:", payment.status)
           // Procesar el pago encontrado
           return await this.processWebhook(String(payment.id))
         } else {
-          console.log("[API] No payment found for pedidoId:", pedidoId)
+          console.log("[API] No payment found for pedidoId:", pedidoId, "in", searchResult.results?.length || 0, "payments")
           return { pedidoId, status: pedido.estado, verified: false }
         }
       } catch (error) {

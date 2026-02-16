@@ -65,8 +65,7 @@ export default function CheckoutPendingPage() {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto text-center">
-            <Loader2 className="h-16 w-16 text-blue-600 mx-auto mb-4 animate-spin" />
-            <h1 className="text-3xl font-bold mb-4">Verificando el estado del pago...</h1>
+            <Loader2 className="h-16 w-16 text-black mx-auto mb-4 animate-spin" />
           </div>
         </main>
       </div>

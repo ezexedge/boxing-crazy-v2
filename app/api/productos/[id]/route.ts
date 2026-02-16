@@ -4,8 +4,11 @@ import { prisma } from "@/lib/db"
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const producto = await prisma.producto.findUnique({
-      where: { id },
+    const producto = await prisma.producto.findFirst({
+      where: {
+        id,
+        activo: true
+      },
       include: {
         Variante: true,
       },

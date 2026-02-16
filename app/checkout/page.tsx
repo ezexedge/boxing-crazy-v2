@@ -17,9 +17,11 @@ export default function CheckoutPage() {
   const items = useCartStore((state) => state.items)
   const total = useCartStore((state) => state.total())
   const clearCart = useCartStore((state) => state.clearCart)
+  const validateCartItems = useCartStore((state) => state.validateCartItems)
   const user = useAuthStore((state) => state.user)
   const token = useAuthStore((state) => state.token)
   const [isLoading, setIsLoading] = useState(false)
+  const [isValidatingCart, setIsValidatingCart] = useState(false)
   const [error, setError] = useState("")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
@@ -98,17 +100,51 @@ export default function CheckoutPage() {
   }
 
   const handleCheckout = async () => {
+    // Validar formulario primero
+    if (!validateForm()) {
+      setError("Por favor completa todos los campos requeridos correctamente")
+      return
+    }
+
     setIsLoading(true)
+    setIsValidatingCart(true)
     setError("")
 
     try {
+      // Validar carrito antes de proceder
+      await validateCartItems()
+
+      // Verificar si hay items inválidos después de la validación
+      const currentInvalidItems = useCartStore.getState().invalidItems
+      if (currentInvalidItems.length > 0) {
+        setError(
+          `No se puede proceder con el pago. ${currentInvalidItems.length} producto(s) no están disponibles. Revisa tu carrito.`
+        )
+        setIsLoading(false)
+        setIsValidatingCart(false)
+        router.push("/carrito")
+        return
+      }
+
+      // Verificar que aún hay items después de la validación
+      const currentItems = useCartStore.getState().items
+      if (currentItems.length === 0) {
+        setError("Tu carrito está vacío")
+        setIsLoading(false)
+        setIsValidatingCart(false)
+        router.push("/carrito")
+        return
+      }
+
+      setIsValidatingCart(false)
+
       const response = await fetch("/api/checkout/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ items, billingAddress: formData }),
+        body: JSON.stringify({ items: currentItems, billingAddress: formData }),
       })
 
       if (!response.ok) {
@@ -126,6 +162,7 @@ export default function CheckoutPage() {
       console.error("Checkout error:", err)
       setError(err.message || "Error al procesar el pago. Por favor intenta nuevamente.")
       setIsLoading(false)
+      setIsValidatingCart(false)
     }
   }
 
@@ -344,7 +381,7 @@ export default function CheckoutPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Redireccionando a MercadoPago...
+                      {isValidatingCart ? "Validando carrito..." : "Redireccionando a MercadoPago..."}
                     </>
                   ) : (
                     <span className="flex items-center justify-center">

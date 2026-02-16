@@ -5,6 +5,7 @@ import "./globals.css"
 import { Providers } from "@/lib/providers"
 import { WhatsAppButton } from "@/components/whatsapp-button"
 import { Toaster } from "@/components/ui/sonner"
+import { Footer } from "@/components/footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
           {children}
+          <Footer />
           <WhatsAppButton />
           <Toaster />
         </Providers>

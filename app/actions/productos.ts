@@ -12,7 +12,9 @@ export async function getProductos(params?: {
   search?: string
 }) {
   try {
-    const where: any = {}
+    const where: any = {
+      activo: true, // Solo productos activos (no eliminados)
+    }
 
     if (params?.categoria) {
       where.categoria = params.categoria
@@ -49,8 +51,11 @@ export async function getProductos(params?: {
  */
 export async function getProductoById(id: string) {
   try {
-    const producto = await prisma.producto.findUnique({
-      where: { id },
+    const producto = await prisma.producto.findFirst({
+      where: {
+        id,
+        activo: true, // Solo productos activos (no eliminados)
+      },
       include: {
         Variante: {
           orderBy: { color: "asc" },
@@ -80,6 +85,7 @@ export async function searchProductos(query: string) {
 
     const productos = await prisma.producto.findMany({
       where: {
+        activo: true, // Solo productos activos (no eliminados)
         OR: [
           { nombre: { contains: query, mode: "insensitive" } },
           { descripcion: { contains: query, mode: "insensitive" } },
@@ -106,7 +112,10 @@ export async function searchProductos(query: string) {
 export async function getProductosPorCategoria(categoria: string) {
   try {
     const productos = await prisma.producto.findMany({
-      where: { categoria },
+      where: {
+        categoria,
+        activo: true, // Solo productos activos (no eliminados)
+      },
       include: {
         Variante: true,
       },
@@ -126,7 +135,10 @@ export async function getProductosPorCategoria(categoria: string) {
 export async function getProductosPorGenero(genero: string) {
   try {
     const productos = await prisma.producto.findMany({
-      where: { genero },
+      where: {
+        genero,
+        activo: true, // Solo productos activos (no eliminados)
+      },
       include: {
         Variante: true,
       },

@@ -49,6 +49,20 @@ export async function PUT(
     const data = await request.json()
     console.log("🟦 Actualizando producto:", id, data)
 
+    // 🔄 Si solo se está restaurando el producto (activo: true)
+    if (Object.keys(data).length === 1 && data.activo === true) {
+      const producto = await prisma.producto.update({
+        where: { id },
+        data: {
+          activo: true,
+          updatedAt: new Date(),
+        },
+        include: { Variante: true },
+      })
+      console.log("✅ Producto restaurado:", producto)
+      return NextResponse.json({ producto })
+    }
+
     // 🚀 Transacción atómica: borra y recrea las variantes
     const [, producto] = await prisma.$transaction([
       prisma.variante.deleteMany({
@@ -87,7 +101,7 @@ export async function PUT(
   }
 }
 
-// ✅ Eliminar producto
+// ✅ Eliminar producto (borrado lógico)
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -101,11 +115,15 @@ export async function DELETE(
     if (!payload || payload.role !== "admin")
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
-    await prisma.producto.delete({
+    await prisma.producto.update({
       where: { id },
+      data: {
+        activo: false,
+        updatedAt: new Date()
+      },
     })
 
-    console.log("🗑️ Producto eliminado:", id)
+    console.log("🗑️ Producto desactivado (borrado lógico):", id)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[v0] Delete producto error:", error)

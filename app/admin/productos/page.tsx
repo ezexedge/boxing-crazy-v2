@@ -6,7 +6,7 @@ import { AdminLayout } from "@/components/admin-layout"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import type { Producto } from "@/lib/types"
-import { Plus, Pencil, Trash2, X, Upload, Star } from "lucide-react"
+import { Plus, Pencil, Trash2, X, Upload, Star, RotateCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -182,7 +182,7 @@ export default function AdminProductosPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return
+    if (!confirm("¿Estás seguro de eliminar este producto? Se ocultará del catálogo pero permanecerá en el historial de pedidos.")) return
 
     try {
       const response = await fetch(`/api/admin/productos/${id}`, {
@@ -197,6 +197,25 @@ export default function AdminProductosPage() {
       }
     } catch (error) {
       console.error("[v0] Delete producto error:", error)
+    }
+  }
+
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/productos/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ activo: true }),
+      })
+
+      if (response.ok) {
+        fetchProductos()
+      }
+    } catch (error) {
+      console.error("[v0] Restore producto error:", error)
     }
   }
 
@@ -518,7 +537,10 @@ export default function AdminProductosPage() {
           </thead>
           <tbody>
             {productos.map((producto) => (
-              <tr key={producto.id} className="border-b last:border-0">
+              <tr
+                key={producto.id}
+                className={`border-b last:border-0 ${!producto.activo ? "bg-red-50 opacity-60" : ""}`}
+              >
                 <td className="p-4">
                   <div className="w-12 h-12 relative bg-neutral-100 rounded overflow-hidden">
                     <Image
@@ -529,19 +551,41 @@ export default function AdminProductosPage() {
                     />
                   </div>
                 </td>
-                <td className="p-4 font-medium">{producto.nombre}</td>
+                <td className="p-4">
+                  <div className="flex items-center gap-2">
+                    <span className={producto.activo ? "font-medium" : "font-medium line-through"}>
+                      {producto.nombre}
+                    </span>
+                    {!producto.activo && (
+                      <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">Eliminado</span>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4">{producto.categoria}</td>
                 <td className="p-4">{producto.genero}</td>
                 <td className="p-4">${producto.precio.toLocaleString()}</td>
                 <td className="p-4">{getTotalStock(producto)}</td>
                 <td className="p-4">{producto.Variante?.length || 0}</td>
                 <td className="p-4 text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(producto)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(producto.id)}>
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
+                  {producto.activo ? (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(producto)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(producto.id)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRestore(producto.id)}
+                      title="Restaurar producto"
+                    >
+                      <RotateCcw className="h-4 w-4 text-green-600" />
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}

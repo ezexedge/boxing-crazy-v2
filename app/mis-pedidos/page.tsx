@@ -22,7 +22,7 @@ interface PedidoItem {
     id: string
     nombre: string
     imagenPortada?: string
-  }
+  } | null
 }
 
 interface Pedido {
@@ -57,6 +57,7 @@ export default function MisPedidosPage() {
   const [loading, setLoading] = useState(true)
   const [retryingPayment, setRetryingPayment] = useState<string | null>(null)
   const [hasVerified, setHasVerified] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -91,11 +92,16 @@ export default function MisPedidosPage() {
           clearCart()
         }
 
+        // Detener el loading antes de verificar pedidos
+        setLoading(false)
+
         // Verificar automáticamente pedidos pendientes solo una vez
         if (!hasVerified) {
           const pedidosPendientes = data.pedidos.filter((p: Pedido) => p.estado === "pendiente")
           if (pedidosPendientes.length > 0) {
+            setVerifying(true)
             await verifyPendingOrders(pedidosPendientes)
+            setVerifying(false)
           }
           setHasVerified(true)
         }
@@ -176,7 +182,7 @@ export default function MisPedidosPage() {
   if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-black" />
       </div>
     )
   }
@@ -198,6 +204,12 @@ export default function MisPedidosPage() {
           </Button>
           <h1 className="text-3xl font-bold mb-2">Mis Pedidos</h1>
           <p className="text-gray-600">Consulta el estado de tus compras</p>
+          {verifying && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Verificando estado de pagos pendientes...</span>
+            </div>
+          )}
         </div>
 
         {pedidos.length === 0 ? (
@@ -243,7 +255,7 @@ export default function MisPedidosPage() {
                         {pedido.PedidoItem.map((item) => (
                           <div key={item.id} className="flex gap-4 border-b pb-3 last:border-0">
                             <div className="relative w-20 h-20 bg-gray-100 rounded">
-                              {item.Producto.imagenPortada && (
+                              {item.Producto?.imagenPortada && (
                                 <Image
                                   src={item.Producto.imagenPortada}
                                   alt={item.Producto.nombre}
@@ -253,7 +265,9 @@ export default function MisPedidosPage() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-medium">{item.Producto.nombre}</h4>
+                              <h4 className="font-medium">
+                                {item.Producto?.nombre || "Producto no disponible"}
+                              </h4>
                               <div className="text-sm text-gray-600 space-y-1">
                                 {item.color && <p>Color: {item.color}</p>}
                                 {item.talle && <p>Talle: {item.talle}</p>}
@@ -325,32 +339,53 @@ export default function MisPedidosPage() {
 
                       {pedido.estado === "pendiente" && (
                         <div className="border-t pt-4 space-y-2">
-                          <p className="text-sm text-gray-600 mb-3">
-                            Tu pedido está esperando el pago. Completa el pago para procesar tu orden.
-                          </p>
-                          <Button
-                            className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
-                            onClick={() => handleRetryPayment(pedido.id)}
-                            disabled={retryingPayment === pedido.id}
-                          >
-                            {retryingPayment === pedido.id ? (
+                          {(() => {
+                            const hoursElapsed = (Date.now() - new Date(pedido.createdAt).getTime()) / (1000 * 60 * 60)
+                            const isPaidButNotVerified = hoursElapsed > 1 // Más de 1 hora pendiente
+
+                            return (
                               <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Redireccionando...
+                                {isPaidButNotVerified ? (
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                    <p className="text-sm text-blue-800 font-medium mb-1">
+                                      ¿Ya pagaste este pedido?
+                                    </p>
+                                    <p className="text-xs text-blue-700">
+                                      Si completaste el pago en MercadoPago, el sistema lo verificará automáticamente.
+                                      Si el pago no se confirma después de unos minutos, contacta a soporte.
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-600 mb-3">
+                                    Tu pedido está esperando el pago. Completa el pago para procesar tu orden.
+                                  </p>
+                                )}
+                                <Button
+                                  className="w-full bg-[#009EE3] hover:bg-[#0082BE] text-white"
+                                  onClick={() => handleRetryPayment(pedido.id)}
+                                  disabled={retryingPayment === pedido.id}
+                                >
+                                  {retryingPayment === pedido.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Redireccionando...
+                                    </>
+                                  ) : (
+                                    <span className="flex items-center justify-center">
+                                      {isPaidButNotVerified ? "Reintentar pago con" : "Pagar con"}
+                                      <Image
+                                        src="/mp-logo.svg"
+                                        alt="MercadoPago"
+                                        width={100}
+                                        height={24}
+                                        className="ml-2"
+                                      />
+                                    </span>
+                                  )}
+                                </Button>
                               </>
-                            ) : (
-                              <span className="flex items-center justify-center">
-                                Pagar con
-                                <Image
-                                  src="/mp-logo.svg"
-                                  alt="MercadoPago"
-                                  width={100}
-                                  height={24}
-                                  className="ml-2"
-                                />
-                              </span>
-                            )}
-                          </Button>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>

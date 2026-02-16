@@ -88,12 +88,14 @@ export function Header() {
                       <span className="text-xs text-neutral-500">{user.email}</span>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/mis-pedidos">
-                      <Package className="mr-2 h-4 w-4" />
-                      Mis Pedidos
-                    </Link>
-                  </DropdownMenuItem>
+                  {user.role !== "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/mis-pedidos">
+                        <Package className="mr-2 h-4 w-4" />
+                        Mis Pedidos
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {user.role === "admin" && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">Panel Admin</Link>

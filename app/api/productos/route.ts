@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     console.log("[v0] Query params:", { categoria, genero })
 
-    const where: any = {}
+    const where: any = { activo: true }
     if (categoria) where.categoria = categoria
     if (genero) where.genero = genero
 

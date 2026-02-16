@@ -21,7 +21,8 @@ export function CheckoutSuccessClient({ pedidoId }: CheckoutSuccessClientProps) 
 
   useEffect(() => {
     let retryCount = 0
-    const MAX_RETRIES = 1
+    const MAX_RETRIES = 3
+    const RETRY_DELAYS = [2000, 4000, 6000] // Delays incrementales
 
     async function verifyPayment() {
       // Obtener paymentId de los query params (MercadoPago lo envía)
@@ -66,10 +67,11 @@ export function CheckoutSuccessClient({ pedidoId }: CheckoutSuccessClientProps) 
             clearCart()
             setVerifying(false)
           } else if (result.verified === false && retryCount < MAX_RETRIES) {
-            // No se encontró el pago aún, reintentar una vez
+            // No se encontró el pago aún, reintentar con delay incremental
+            const delay = RETRY_DELAYS[retryCount] || 6000
             retryCount++
-            console.log("[Checkout Success] Payment not found, retrying in 2s...")
-            setTimeout(() => verifyPayment(), 2000)
+            console.log(`[Checkout Success] Payment not found, retrying in ${delay}ms... (${retryCount}/${MAX_RETRIES})`)
+            setTimeout(() => verifyPayment(), delay)
           } else {
             // No se encontró después de reintentar
             if (result.verified === false) {

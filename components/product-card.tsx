@@ -1,15 +1,26 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import type { Producto } from "@/lib/types"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { ColorDisplay } from "@/components/color-display"
+import { useCartStore } from "@/lib/stores/cart-store"
+import { useMemo } from "react"
 
 interface ProductCardProps {
   producto: Producto
 }
 
 export function ProductCard({ producto }: ProductCardProps) {
-  const totalStock = producto.Variante?.reduce((sum, variante) => sum + variante.stock, 0) || 0
+  const items = useCartStore((state) => state.items)
+
+  // Verificar si hay stock disponible
+  const hasStock = useMemo(
+    () => producto.Variante?.some((variante) => variante.stock > 0) || false,
+    [producto.Variante]
+  )
+
   const availableColors = [...new Set(producto.Variante?.map((v) => v.color) || [])]
 
   return (
@@ -34,12 +45,8 @@ export function ProductCard({ producto }: ProductCardProps) {
           )}
         </CardContent>
         <CardFooter className="p-4 pt-0 flex-shrink-0">
-          <p className="text-sm text-neutral-600">
-            {totalStock > 0 ? (
-              availableColors.length > 1 ?
-                `Stock total: ${totalStock} unidades (todos los colores)` :
-                `Stock disponible: ${totalStock} unidades`
-            ) : "Sin stock"}
+          <p className={`text-sm font-semibold ${hasStock ? "text-green-600" : "text-red-600"}`}>
+            {hasStock ? "En stock" : "Agotado"}
           </p>
         </CardFooter>
       </Card>

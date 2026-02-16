@@ -13,37 +13,34 @@ model Pedido {
   total         Float
   estado        String       @default("pendiente")
   mercadopagoId String?
-
-  // Dirección de envío/facturación
-  email         String
-  country       String
-  firstName     String
-  lastName      String
-  company       String?
-  addressLine1  String
-  addressLine2  String?
-  postalCode    String
-  city          String
-  province      String
-  phone         String?
-
   createdAt     DateTime     @default(now())
   updatedAt     DateTime
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  company       String?
+  country       String
+  email         String
+  firstName     String
+  lastName      String
+  phone         String?
+  postalCode    String
+  province      String
   User          User?        @relation(fields: [userId], references: [id])
   PedidoItem    PedidoItem[]
 }
 
 model PedidoItem {
-  id         String   @id
+  id         String    @id
   pedidoId   String
-  productoId String
+  productoId String?
   cantidad   Int
   precio     Float
   color      String?
   talle      String?
-  createdAt  DateTime @default(now())
-  Pedido     Pedido   @relation(fields: [pedidoId], references: [id])
-  Producto   Producto @relation(fields: [productoId], references: [id])
+  createdAt  DateTime  @default(now())
+  Pedido     Pedido    @relation(fields: [pedidoId], references: [id])
+  Producto   Producto? @relation(fields: [productoId], references: [id])
 }
 
 model Producto {
@@ -55,6 +52,7 @@ model Producto {
   genero        String
   imagenes      String[]
   imagenPortada String?
+  activo        Boolean      @default(true)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime
   PedidoItem    PedidoItem[]

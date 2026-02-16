@@ -8,6 +8,10 @@ import { ArrowRight } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
 import { getProductos } from "@/app/actions/productos"
 
+// Revalidar la página cada 0 segundos (siempre dinámico)
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {

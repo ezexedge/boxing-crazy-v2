@@ -7,21 +7,33 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
-import { Trash2, Minus, Plus } from "lucide-react"
+import { Trash2, Minus, Plus, AlertCircle } from "lucide-react"
 
 export default function CarritoPage() {
   const router = useRouter()
   const items = useCartStore((state) => state.items)
+  const invalidItems = useCartStore((state) => state.invalidItems)
   const removeItem = useCartStore((state) => state.removeItem)
   const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const validateCartItems = useCartStore((state) => state.validateCartItems)
   const total = useCartStore((state) => state.total())
   const user = useAuthStore((state) => state.user)
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!user) {
       router.push("/login?redirect=/carrito")
       return
     }
+
+    // Validar carrito antes de proceder
+    await validateCartItems()
+
+    // Si hay items inválidos después de la validación, no permitir checkout
+    const currentInvalidItems = useCartStore.getState().invalidItems
+    if (currentInvalidItems.length > 0) {
+      return
+    }
+
     router.push("/checkout")
   }
 
@@ -47,6 +59,32 @@ export default function CarritoPage() {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Carrito de Compras</h1>
+
+        {/* Mostrar alertas de items inválidos */}
+        {invalidItems.length > 0 && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-900 mb-2">
+                  Se encontraron problemas con {invalidItems.length} producto(s)
+                </h3>
+                <ul className="space-y-1 text-sm text-red-800">
+                  {invalidItems.map((item, index) => (
+                    <li key={index}>
+                      <strong>{item.nombre}</strong>
+                      {item.color && ` - ${item.color}`}
+                      {item.talle && ` - ${item.talle}`}: {item.message}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-red-700 mt-2">
+                  Estos productos han sido removidos automáticamente de tu carrito.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}

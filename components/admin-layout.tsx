@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingBag, LogOut, Home } from "lucide-react"
+import { LayoutDashboard, Package, LogOut, Home } from "lucide-react"
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -41,12 +41,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               <Link href="/admin/productos">
                 <Package className="mr-2 h-4 w-4" />
                 Productos
-              </Link>
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link href="/admin/pedidos">
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                Pedidos
               </Link>
             </Button>
             <Button variant="ghost" className="w-full justify-start" asChild>

@@ -19,8 +19,23 @@ export async function createCheckout(userId: string, items: CartItem[]) {
       return { success: false, error: "Usuario no autenticado" }
     }
 
-    // Verificar stock de cada producto
+    // Verificar que los productos estén activos y tengan stock
     for (const item of items) {
+      // Verificar que el producto esté activo (no eliminado)
+      const producto = await prisma.producto.findFirst({
+        where: {
+          id: item.productoId,
+          activo: true,
+        },
+      })
+
+      if (!producto) {
+        return {
+          success: false,
+          error: `El producto ${item.nombre} ya no está disponible`,
+        }
+      }
+
       if (item.color && item.talle) {
         const variante = await prisma.variante.findFirst({
           where: {
